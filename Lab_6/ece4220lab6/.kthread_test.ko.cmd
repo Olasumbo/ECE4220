@@ -1,0 +1,1 @@
+cmd_/home/pi/GitHub/lab-6-Olasumbo/ece4220lab6/kthread_test.ko := ld -EL -r  -T ./scripts/module-common.lds --build-id  -o /home/pi/GitHub/lab-6-Olasumbo/ece4220lab6/kthread_test.ko /home/pi/GitHub/lab-6-Olasumbo/ece4220lab6/kthread_test.o /home/pi/GitHub/lab-6-Olasumbo/ece4220lab6/kthread_test.mod.o
