@@ -69,7 +69,7 @@ void btn_activated( void * ptr )
 
                 }
         
-                //usleep( 200 );	
+        	
         }
 
 }    
