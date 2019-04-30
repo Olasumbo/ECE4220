@@ -19,6 +19,7 @@
 #define CHAR_DEV "/dev/Lab6"
 
 #define MSG_SIZE 40 // message size
+
 char IP_save[16];
 socklen_t fromlen;
 int sock;
@@ -36,9 +37,9 @@ void btn_activated( void * ptr )
         int cdev_id, devi;
         char buffer[MSG_SIZE];
 
-        if((cdev_id = open( CHAR_DEV, O_RDONLY )) == -1 )
+        if( (cdev_id = open( CHAR_DEV, O_RDONLY )) == -1 )
         {
-                printf( "Cannot open device %d\n", CHAR_DEV );
+                printf( "Cannot open device for reading %d\n", CHAR_DEV );
         }
 
         while(1)
@@ -291,7 +292,7 @@ if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &boolval, sizeof(boolval)) < 0)
     
                     if( ( cdev_id = open( CHAR_DEV, O_WRONLY ) ) == -1 )
                     {
-                            printf( "Cannot open device %s\n", CHAR_DEV );
+                            printf( "Cannot open device for writing %s\n", CHAR_DEV );
                     }
             
                     if( buffer[1] != '\0' )

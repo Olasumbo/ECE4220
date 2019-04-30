@@ -66,6 +66,7 @@ static int count = 0, dummy = 0;
 static irqreturn_t button_isr(int irq, void *dev_id)
 {
         unsigned long btn = *GP_EVENT & 0x1F0000 ;
+        
 	// In general, you want to disable the interrupt while handling it.
 	disable_irq_nosync(79);
         
@@ -104,6 +105,7 @@ static irqreturn_t button_isr(int irq, void *dev_id)
         }
         
         iowrite32( ( *GP_EVENT | 0x1F0000 ), GP_EVENT );
+        
 	printk("Interrupt handled\n");	
 	enable_irq(79);		// re-enable interrupt
 	
@@ -198,7 +200,8 @@ int timer_init(void)
         
         //Set Pullup down controlllers on
         
-        
+        
+
 	dummy = request_irq(79, button_isr, IRQF_SHARED, "Button_handler", &mydev_id);
         if( dummy < 0 )
 	{

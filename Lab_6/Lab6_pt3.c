@@ -77,6 +77,11 @@ static char send[MSG_SIZE];
 static ssize_t device_read( struct file *filp, char __user * buffer, size_t length, loff_t *offset )
 {
 	ssize_t dummy = copy_to_user( buffer, send, length );
+        
+        if( dummy )
+        {
+            //Woah bro
+        }
 
 //	printk( "\nSent message to user: %s", buffer );
 
@@ -90,7 +95,7 @@ static ssize_t device_write( struct file * filp, const char __user *buff, size_t
 {
 
 	ssize_t dummy;
-        char lastchar;
+        //char lastchar;
 
 	if( len > MSG_SIZE )
 		return -EINVAL;
@@ -104,7 +109,7 @@ static ssize_t device_write( struct file * filp, const char __user *buff, size_t
 		msg[len] = '\0';
 	}
 
-	printk( "\nMessage from user space: %s", msg );
+	printk( "\nMessage from user space: %s -%c-", msg, msg[1] );
 
 	if( msg[0] == '@' )
 	{
@@ -114,25 +119,27 @@ static ssize_t device_write( struct file * filp, const char __user *buff, size_t
               
                 case 'A':
                     printk("Button 1");
-                    timer_interval_ns = 4545454;
+                    timer_interval_ns = 500000;
                     break;
                 case 'B':
                     printk("Button 2");
-                    timer_interval_ns = 4048582;
+                    timer_interval_ns = 750000;
                     break;
                 case 'C':
                     printk("Button 3");
-                    timer_interval_ns = 3816794;
+                    timer_interval_ns = 1000000;
                     break;
                 case 'D':
                     printk("Button 4");
-                    timer_interval_ns = 300000;
+                    timer_interval_ns = 1250000;
                     break;
                 case 'E':
                     printk("Button 5");
-                    timer_interval_ns = 700000;
-                    break;
+                    timer_interval_ns = 1500000;
+                    break;              
 	   }
+	   
+        }
 
 	return len;
 
@@ -237,6 +244,7 @@ enum hrtimer_restart timer_callback(struct hrtimer *timer_for_restart)
 
 int timer_init(void)
 {
+        ktime_t interval;
        // Configure and initialize timer
 	ktime_t ktime = ktime_set(0, timer_interval_ns); // (long sec, long nano_sec)
 	
