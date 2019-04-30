@@ -1,4 +1,4 @@
-}
+
 #include <ifaddrs.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -12,11 +12,17 @@
 #include <string.h>
 #include <sys/types.h>
 #include <time.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <sched.h>
 
 #define CHAR_DEV "/dev/Lab6"
 
-#define MSG_SIZE 40			// message size
+#define MSG_SIZE 40 // message size
 char IP_save[16];
+socklen_t fromlen;
+int sock;
+struct sockaddr_in addr;
 
 void error(const char *msg)
 {
@@ -24,13 +30,10 @@ void error(const char *msg)
     exit(0);
 }
 
-void wait4btn( void * ptr )
+void btn_activated( void * ptr )
 {
-
-        //puts( "Button Press Thread Started" );
-
         //Open the character device
-        int cdev_id, dummy;
+        int cdev_id, devi;
         char buffer[MSG_SIZE];
 
         if((cdev_id = open( CHAR_DEV, O_RDONLY )) == -1 )
@@ -40,51 +43,46 @@ void wait4btn( void * ptr )
 
         while(1)
         {
-                //puts( "Started btnWait loop" );
-
-                dummy = read( cdev_id, buffer, sizeof(buffer) );
-                if( dummy != sizeof(buffer) )
+                devi = read( cdev_id, buffer, sizeof(buffer) );
+                if( devi != sizeof(buffer) )
                 {
                         printf( "Read Failed" );
                         break;
                 }
                 else if( buffer[0] != '\0' )
                 {	
-                        printf( "\nRecieved Button pressed: %s", buffer );
+                        printf( "Recieved Button pressed: %s\n", buffer );
                         buffer[0] = '\0';
 
-                        printf( "\nSending Command: @%c to %s", buffer[1], IP_save );
+                        printf( "Sending Command: @%c to %s\n", buffer[1], IP_save );
         
-                        char send2Self[MSG_SIZE];
-                        sprintf( send2Self, "@%c", buffer[1] );
+                        char send[MSG_SIZE];
+                        
+                        sprintf( send, "@%c", buffer[1] );
 
                         addr.sin_addr.s_addr = inet_addr( IP_save );
-                        sendto( sock, send2Self, MSG_SIZE, 0, (const struct sockaddr *)&addr, fromlen );
+                        
+                        sendto( sock, send, MSG_SIZE, 0, (const struct sockaddr *)&addr, fromlen );
+                        
+                        //sendto( sock, ReturnVote, MSG_SIZE, 0, (const struct sockaddr *)&addr, fromlen );
 
                 }
         
-                usleep( 200 );	
-
-        }	
+                //usleep( 200 );	
+        }
 
 }    
 
 int main(int argc, char *argv[])
 {
-    
-    
-//int sock, length, n;
-            int boolval = 1;			// for a socket option
-//socklen_t fromlen;
-//struct sockaddr_in server;
-//struct sockaddr_in addr;
-//char buffer[MSG_SIZE];	// to store received messages or messages to be sent.
+
+    int boolval = 1; // for a socket option
 
     if (argc != 3)
-{
+    {
         printf("usage:: myfile port name\n");
         exit(1);
-}
+    }
     
     int portno = atoi(argv[1]);//saving the port number from user input
     
@@ -93,8 +91,8 @@ int main(int argc, char *argv[])
     strcpy(Name , argv[2]); // Destination, source
     
     struct ifaddrs *ifaddr = NULL, *ifa = NULL;
+    
     void *AddrPtr = NULL;
-    //int IC = 0;
     char host[INET6_ADDRSTRLEN];
     
     
@@ -103,10 +101,6 @@ int main(int argc, char *argv[])
         perror("getifaddrs");
         exit(EXIT_FAILURE);
     }
-
-    //char IP1[16];
-    //char IP2[16];
-    //char IP3[16];
             
     /* Accesing the link list */
     for(ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
@@ -118,16 +112,11 @@ int main(int argc, char *argv[])
                         printf("Internet Address: %s\n", inet_ntop(ifa->ifa_addr->sa_family, AddrPtr, host, sizeof(host)));
                                             
                     strcpy( IP_save, inet_ntop(ifa->ifa_addr->sa_family, AddrPtr, host, sizeof(host)) ); 
-                    /* strcpy( IP1, inet_ntop(ifa->ifa_addr->sa_family, AddrPtr, host, sizeof(host)) ); 
-                    strcpy( IP2, inet_ntop(ifa->ifa_addr->sa_family, AddrPtr, host, sizeof(host)) ); 
-        strcpy( IP3, inet_ntop(ifa->ifa_addr->sa_family, AddrPtr, host, sizeof(host)) );    */      
         }
     }
         
-int sock, length;
-socklen_t fromlen;
-struct sockaddr_in addr;
-        
+int length;
+
 printf( "\nMy IP is: %s\n", IP_save );
     /* printf( "\nMy IP is: %s\n", IP1 );
     printf( "\nMy IP is: %s\n", IP2 );
@@ -193,8 +182,8 @@ if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &boolval, sizeof(boolval)) < 0)
     unsigned int random = 0;
     srand((unsigned)time(NULL));
     
-    pthread_t btnThread;
-    pthread_create( &btnThread, NULL, (void *) wait4btn, (void *) &sock );
+    pthread_t buttonThread;
+    pthread_create( &buttonThread, NULL, (void *) btn_activated, (void *) &sock );
 
     while (1)
     {
@@ -234,7 +223,7 @@ if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &boolval, sizeof(boolval)) < 0)
             random = 1 + rand()%10;
             
             sprintf( ReturnVote, "\n#%s %u\n", IP_save, random);
-            printf("\nTesting random: %u\n",random);
+           // printf("\nTesting random: %u\n",random);
             
             //unsigned int testnum = random;
             
@@ -251,7 +240,7 @@ if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &boolval, sizeof(boolval)) < 0)
         
         else if( buffer[0] == '#' )
         {
-            printf("\nTesting to make sure random value is accurate: %u\n",random);
+           // printf("\nTesting to make sure random value is accurate: %u\n",random);
             
             unsigned int Num; // Assigned newrandom number
             unsigned int Ip; // last digit of my IP address
@@ -265,43 +254,39 @@ if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &boolval, sizeof(boolval)) < 0)
             
             // If the random value assigned is greater than the current randomvalue
             //then the new random value becomes the master, else no master
-                if( ( Num > random )) 
+                if( ( random > Num )) // my number is greater than friend, then I am master
                 {
                     master = 1;
-                    printf("I am Master\n");
-                    sprintf( Headmaster, "%s on board %s is master!", Name, IP_save ); //printing in server
-                    sendto( sock, Headmaster, MSG_SIZE, 0, (const struct sockaddr *)&addr, fromlen ); // Sending to client
+                   // printf("I am Master\n");
                 }
                 
-                else if( Num == random ) 
+                else if( random == Num )  //my number is equal to friend, check ips
                 {
                         if( Ip >= LastAddr )
                         {
                             master = 1;
-                            printf("I am Master..\n");
-                            sprintf( Headmaster, "%s on board %s is master!", Name, IP_save ); //printing in server
-                            sendto( sock, Headmaster, MSG_SIZE, 0, (const struct sockaddr *)&addr, fromlen ); // Sending to client
+                            //printf("I am Master..\n");
                         } 
                         else 
                         {                  
                             master = 0;
-                            printf("I am NOT THE master\n");
+                            //printf("I am NOT THE master\n");
                         }
                 }
                 
                 else
                 {
                     master = 0;
-                    printf("I am NOT THE master\n");
+                   // printf("I am NOT THE master\n");
                 }
         }
         else if( buffer[0] == '@' )
         {
             
-            int cdev_id, dummy;
-            static char lastChar;
+            int cdev_id, devi;
+            static char L_Char;
             
-            if( lastChar != buffer[1] )
+            if( L_Char != buffer[1] )
             {
     
                     if( ( cdev_id = open( CHAR_DEV, O_WRONLY ) ) == -1 )
@@ -311,7 +296,7 @@ if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &boolval, sizeof(boolval)) < 0)
             
                     if( buffer[1] != '\0' )
                     {
-                            dummy = write( cdev_id, buffer, sizeof( buffer ) );
+                            devi = write( cdev_id, buffer, sizeof( buffer ) );
                     }
 
                     close( cdev_id );
@@ -319,11 +304,10 @@ if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &boolval, sizeof(boolval)) < 0)
                     if( master == 1 )
                     {
                             addr.sin_addr.s_addr = inet_addr( "128.206.19.255" );
-                            sendto( sock, buffer, MSG_SIZE, 0, (const struct sockaddr *) & addr, fromlen );
                     }
             }
             
-            lastChar = buffer[1];
+            L_Char = buffer[1];
         
         }
         

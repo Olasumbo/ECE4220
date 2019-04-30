@@ -66,10 +66,10 @@ unsigned long * GP_SEL1;
 unsigned long * GP_SEL2;
 
 unsigned long timer_interval_ns = 1e6;	// timer interval length (nano sec part)
-static struct hrtimer hr_timer;			// timer structure
+static struct hrtimer hr_timer; // timer structure
 static int count = 0, dummy = 0;
 
-static int batmaaaaaan;
+static int devs; // same as major
 static char msg[MSG_SIZE];
 static char send[MSG_SIZE];
 
@@ -109,7 +109,30 @@ static ssize_t device_write( struct file * filp, const char __user *buff, size_t
 	if( msg[0] == '@' )
 	{
 		//changeSound( msg[1] ); 
-	}
+            switch (msg[1])
+            {
+              
+                case 'A':
+                    printk("Button 1");
+                    timer_interval_ns = 4545454;
+                    break;
+                case 'B':
+                    printk("Button 2");
+                    timer_interval_ns = 4048582;
+                    break;
+                case 'C':
+                    printk("Button 3");
+                    timer_interval_ns = 3816794;
+                    break;
+                case 'D':
+                    printk("Button 4");
+                    timer_interval_ns = 300000;
+                    break;
+                case 'E':
+                    printk("Button 5");
+                    timer_interval_ns = 700000;
+                    break;
+	   }
 
 	return len;
 
@@ -165,7 +188,8 @@ static irqreturn_t button_isr(int irq, void *dev_id)
                 break;
         }
         
-        iowrite32( ( *GP_EVENT | 0x1F0000 ), GP_EVENT );
+        iowrite32( ( *GP_EVENT | 0x1F0000 ), GP_EVENT ); // This clears the event status register
+        
 	printk("Interrupt handled\n");	
 	enable_irq(79);		// re-enable interrupt
 	
@@ -201,7 +225,7 @@ enum hrtimer_restart timer_callback(struct hrtimer *timer_for_restart)
         }
         else
 	{
-		iowrite32( ( *GP_CLEAR | 0x00000044 ), GP_CLEAR );
+            iowrite32( ( *GP_CLEAR | 0x00000044 ), GP_CLEAR );
 	}
 	
 	count++;
@@ -258,14 +282,14 @@ int timer_init(void)
 	iowrite32( ( *( GP_PUD + 1 ) & ~(0x1F0000) ), ( GP_PUD + 1 ) );
         iowrite32( ( *GP_AREN | 0x1F0000 ), GP_AREN );
         
-	//SETUP the Characted Device
-	batmaaaaaan = register_chrdev( 0, CDEV_NAME, &fops );
-	if( batmaaaaaan < 0 ) 
+	//SETUP the major Characted Device
+	devs = register_chrdev( 0, CDEV_NAME, &fops );
+	if( devs < 0 ) 
 	{
-		printk( "Dead character device :( -> %d\n", batmaaaaaan );
-		return batmaaaaaan;
+		printk( "Dead character device :( -> %d\n", devs );
+		return devs;
 	}
-	printk( "Create char device (node) with: sudo mknod /dev/%s c %d 0\n", CDEV_NAME, batmaaaaaan );
+	printk( "Create char device (node) with: sudo mknod /dev/%s c %d 0\n", CDEV_NAME, devs );
         
 
 	dummy = request_irq(79, button_isr, IRQF_SHARED, "Button_handler", &mydev_id);
@@ -273,6 +297,14 @@ int timer_init(void)
 	{
 		printk( "Interrupt failed to register" );
 	}
+	//SETUP the Characted Device
+	
+ 	
+        interval = ktime_set(0, timer_interval_ns); 
+        
+        hrtimer_init(&hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+        
+        hr_timer.function = &timer_callback;
 	
 	// Start the timer
  	hrtimer_start(&hr_timer, ktime, HRTIMER_MODE_REL);
@@ -287,13 +319,12 @@ void timer_exit(void)
   	ret = hrtimer_cancel(&hr_timer);	// cancels the timer.
         free_irq( 79, &mydev_id );
         
-	unregister_chrdev( batmaaaaaan, CDEV_NAME );
+	unregister_chrdev( devs, CDEV_NAME );
         
   	if(ret)
-		printk("The timer was still in use...\n");
+            printk("The timer was still in use...\n");
 	else
-		printk("The timer was already canceled...\n");	// if not restarted or
-														// canceled before
+            printk("The timer was already canceled...\n");	// if not restarted or // canceled before
 	
   	printk("HR Timer module uninstalling\n");
 	
